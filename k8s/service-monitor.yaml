@@ -1,0 +1,67 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: quant-framework-monitor
+  namespace: quant-framework
+  labels:
+    app: quant-framework
+spec:
+  selector:
+    matchLabels:
+      app: quant-framework-app
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgres-monitor
+  namespace: quant-framework
+  labels:
+    app: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  endpoints:
+  - port: postgres
+    interval: 30s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: redis-monitor
+  namespace: quant-framework
+  labels:
+    app: redis
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  endpoints:
+  - port: redis
+    interval: 30s
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quant-framework-metrics
+  namespace: quant-framework
+  labels:
+    app: quant-framework-app
+    component: metrics
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: metrics
+  selector:
+    app: quant-framework-app

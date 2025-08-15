@@ -1,0 +1,127 @@
+# 量化投资研究框架 - 生产环境配置
+
+# 生产环境配置，注重安全性和性能
+
+# 应用配置
+app:
+  debug: false
+
+# 数据库配置
+database:
+  pool_size: 30
+  max_overflow: 50
+  pool_timeout: 60
+  pool_recycle: 7200  # 2小时
+  echo: false
+  echo_pool: false
+
+# Redis配置
+redis:
+  max_connections: 100
+  socket_timeout: 10
+  socket_connect_timeout: 10
+
+# Celery配置
+celery:
+  worker_prefetch_multiplier: 4
+  task_soft_time_limit: 3600   # 1小时
+  task_time_limit: 7200        # 2小时
+
+# API配置
+api:
+  debug: false
+  # 生产环境的CORS配置应该从环境变量获取
+  rate_limit_enabled: true
+  rate_limit_calls: 1000
+  rate_limit_period: 60
+
+# 安全配置
+security:
+  # 生产环境必须使用环境变量中的密钥
+  access_token_expire_minutes: 720  # 12小时
+  refresh_token_expire_days: 7      # 7天
+  password_min_length: 10
+  password_require_uppercase: true
+  password_require_lowercase: true
+  password_require_numbers: true
+  password_require_symbols: true
+  max_login_attempts: 3
+  lockout_duration_minutes: 30
+
+# 日志配置
+logging:
+  level: "WARNING"
+  format: "json"
+  console_output: false
+  max_file_size: 209715200  # 200MB
+  backup_count: 10
+
+# 监控配置
+monitoring:
+  metrics_enabled: true
+  health_check_enabled: true
+  alert_enabled: true
+  metrics_interval: 30
+  health_check_interval: 15
+
+# 数据源配置
+data:
+  cache_enabled: true
+  cache_timeout: 7200  # 2小时
+  auto_update_enabled: true
+
+# 功能开关
+features:
+  enable_debug_toolbar: false
+  enable_profiling: false
+  enable_metrics: true
+  enable_alerts: true
+  enable_caching: true
+  enable_rate_limiting: true
+  enable_ssl: true
+  enable_monitoring: true
+  enable_audit_logging: true
+  enable_data_validation: true
+
+# 性能配置
+performance:
+  worker_processes: 8
+  worker_connections: 2000
+  keepalive_timeout: 65
+  max_requests: 50000
+  timeout: 60
+  pool_size: 30
+  max_overflow: 50
+
+# 缓存配置
+cache:
+  backend: "redis"
+  timeout: 7200  # 2小时
+  max_entries: 50000
+  key_prefix: "quant_prod_"
+
+# 安全策略
+security_policy:
+  require_https: true
+  secure_cookies: true
+  csrf_protection: true
+  xss_protection: true
+  content_type_nosniff: true
+  frame_options: "DENY"
+  hsts_max_age: 31536000  # 1年
+  
+# 备份配置
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # 每天凌晨2点
+  retention_days: 30
+  compress: true
+  
+# 监控告警阈值
+alert_thresholds:
+  cpu_usage: 80
+  memory_usage: 85
+  disk_usage: 90
+  response_time: 5000  # 5秒
+  error_rate: 5        # 5%
+  queue_length: 1000

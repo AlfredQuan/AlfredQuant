@@ -1,0 +1,62 @@
+# Prometheus配置文件 - 生产环境
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    monitor: 'quant-framework-prod'
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 量化框架应用监控
+  - job_name: 'quant-framework'
+    static_configs:
+      - targets: ['app:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Redis监控
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis_exporter:9121']
+
+  # PostgreSQL监控
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+
+  # Nginx监控
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx_exporter:9113']
+
+  # Node Exporter (系统监控)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Celery监控
+  - job_name: 'celery'
+    static_configs:
+      - targets: ['celery_exporter:9540']
+
+  # 应用程序自定义指标
+  - job_name: 'app-metrics'
+    static_configs:
+      - targets: ['app:8000']
+    metrics_path: '/api/v1/metrics'
+    scrape_interval: 60s

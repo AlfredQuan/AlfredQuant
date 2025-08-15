@@ -1,0 +1,251 @@
+# 量化投资研究框架 Helm Values
+
+# 全局配置
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# 应用配置
+app:
+  name: quant-framework
+  image:
+    registry: ghcr.io
+    repository: your-org/quant-framework
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 3
+  
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  service:
+    type: ClusterIP
+    port: 8000
+  
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - host: api.your-domain.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: quant-framework-tls
+        hosts:
+          - api.your-domain.com
+
+# Worker配置
+worker:
+  replicaCount: 5
+  
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1"
+    limits:
+      memory: "8Gi"
+      cpu: "4"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+
+# Beat调度器配置
+beat:
+  enabled: true
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# 前端配置
+frontend:
+  enabled: true
+  
+  image:
+    registry: nginx
+    repository: nginx
+    tag: alpine
+  
+  replicaCount: 2
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  service:
+    type: LoadBalancer
+    port: 80
+  
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: your-domain.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: frontend-tls
+        hosts:
+          - your-domain.com
+
+# 数据库配置
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "password"
+    database: "quant_framework"
+  
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "4Gi"
+        cpu: "2"
+
+# Redis配置
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "redispassword"
+  
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: "fast-ssd"
+    
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "2Gi"
+        cpu: "1"
+
+# 监控配置
+monitoring:
+  prometheus:
+    enabled: true
+    server:
+      persistentVolume:
+        enabled: true
+        size: 50Gi
+        storageClass: "fast-ssd"
+  
+  grafana:
+    enabled: true
+    adminPassword: "admin123"
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: "fast-ssd"
+
+# 配置管理
+config:
+  environment: production
+  debug: false
+  logLevel: WARNING
+  
+  # 功能开关
+  features:
+    enableSSL: true
+    enableRateLimiting: true
+    enableMonitoring: true
+    enableAuditLogging: true
+
+# 密钥配置（通过外部密钥管理系统提供）
+secrets:
+  secretKey: ""
+  databaseUrl: ""
+  redisUrl: ""
+  tushareToken: ""
+  windUsername: ""
+  windPassword: ""
+  smtpUsername: ""
+  smtpPassword: ""
+
+# 存储配置
+persistence:
+  enabled: true
+  storageClass: "shared-storage"
+  accessMode: ReadWriteMany
+  size: 50Gi
+
+# 安全配置
+security:
+  networkPolicy:
+    enabled: true
+  
+  podSecurityPolicy:
+    enabled: true
+  
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+
+# 服务网格配置（Istio）
+serviceMesh:
+  enabled: false
+  
+  virtualService:
+    enabled: false
+    hosts:
+      - api.your-domain.com
+  
+  destinationRule:
+    enabled: false
+    trafficPolicy:
+      tls:
+        mode: ISTIO_MUTUAL
+
+# 备份配置
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # 每天凌晨2点
+  retention: 30  # 保留30天
+  
+  storage:
+    type: s3
+    bucket: "quant-framework-backups"
+    region: "us-west-2"

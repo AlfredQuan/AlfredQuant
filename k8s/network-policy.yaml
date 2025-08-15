@@ -1,0 +1,123 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: quant-framework-network-policy
+  namespace: quant-framework
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  ingress:
+  # 允许来自同一命名空间的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: quant-framework
+  
+  # 允许来自Ingress Controller的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+  
+  # 允许来自监控系统的流量
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+  
+  egress:
+  # 允许DNS查询
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # 允许HTTPS出站流量（用于外部API调用）
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  
+  # 允许HTTP出站流量
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+  
+  # 允许访问数据库
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  
+  # 允许访问Redis
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-network-policy
+  namespace: quant-framework
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+  - Ingress
+  
+  ingress:
+  # 只允许来自应用Pod的连接
+  - from:
+    - podSelector:
+        matchLabels:
+          app: quant-framework-app
+    - podSelector:
+        matchLabels:
+          app: quant-framework-worker
+    ports:
+    - protocol: TCP
+      port: 5432
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-network-policy
+  namespace: quant-framework
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  
+  ingress:
+  # 只允许来自应用Pod的连接
+  - from:
+    - podSelector:
+        matchLabels:
+          app: quant-framework-app
+    - podSelector:
+        matchLabels:
+          app: quant-framework-worker
+    - podSelector:
+        matchLabels:
+          app: quant-framework-beat
+    ports:
+    - protocol: TCP
+      port: 6379

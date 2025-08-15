@@ -1,0 +1,299 @@
+# 量化投资研究框架 - 生产环境Docker Compose配置
+version: '3.8'
+
+services:
+  # 主应用服务
+  app:
+    build:
+      context: .
+      target: production
+    container_name: quant-framework-app-prod
+    ports:
+      - "8000:8000"
+    environment:
+      - QUANT_ENV=production
+      - DEBUG=false
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - SECRET_KEY=${SECRET_KEY}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - TUSHARE_TOKEN=${TUSHARE_TOKEN}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./config:/app/config
+    depends_on:
+      - db
+      - redis
+    networks:
+      - quant-network
+    restart: always
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery Worker服务
+  worker:
+    build:
+      context: .
+      target: production
+    container_name: quant-framework-worker-prod
+    command: poetry run celery -A quant_framework.tasks.celery_app worker --loglevel=warning --concurrency=8 --max-tasks-per-child=1000
+    environment:
+      - QUANT_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - SECRET_KEY=${SECRET_KEY}
+      - TUSHARE_TOKEN=${TUSHARE_TOKEN}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      - db
+      - redis
+    networks:
+      - quant-network
+    restart: always
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "poetry", "run", "celery", "-A", "quant_framework.tasks.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Beat调度服务
+  beat:
+    build:
+      context: .
+      target: production
+    container_name: quant-framework-beat-prod
+    command: poetry run celery -A quant_framework.tasks.celery_app beat --loglevel=warning
+    environment:
+      - QUANT_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - db
+      - redis
+    networks:
+      - quant-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+
+  # PostgreSQL数据库
+  db:
+    image: postgres:15-alpine
+    container_name: quant-framework-db-prod
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./backups:/backups
+    networks:
+      - quant-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis缓存和消息队列
+  redis:
+    image: redis:7-alpine
+    container_name: quant-framework-redis-prod
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+      - ./config/redis.prod.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - quant-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Nginx负载均衡器
+  nginx:
+    image: nginx:alpine
+    container_name: quant-framework-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.prod.conf:/etc/nginx/nginx.conf
+      - ./config/ssl:/etc/nginx/ssl
+      - ./frontend/build:/usr/share/nginx/html
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - quant-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: quant-framework-prometheus-prod
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.prod.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - quant-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Grafana可视化
+  grafana:
+    image: grafana/grafana:latest
+    container_name: quant-framework-grafana-prod
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - quant-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 512M
+
+  # 日志收集器
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    container_name: quant-framework-filebeat
+    user: root
+    volumes:
+      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/app/logs:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOSTS}
+    networks:
+      - quant-network
+    restart: always
+    depends_on:
+      - app
+
+# 网络配置
+networks:
+  quant-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 数据卷
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

@@ -1,0 +1,73 @@
+# 量化投资研究框架 - 测试环境配置
+
+# 测试环境特定配置
+
+# 应用配置
+app:
+  debug: false
+
+# 数据库配置（使用测试数据库）
+database:
+  name: "quant_framework_test"
+  pool_size: 3
+  max_overflow: 5
+  echo: false
+
+# Redis配置（使用不同的数据库）
+redis:
+  db: 15  # 使用最后一个数据库进行测试
+  max_connections: 10
+
+# Celery配置（使用测试队列）
+celery:
+  broker_url: "redis://localhost:6379/14"
+  result_backend: "redis://localhost:6379/13"
+  task_always_eager: true  # 同步执行任务，便于测试
+
+# API配置
+api:
+  debug: false
+  rate_limit_enabled: false
+
+# 安全配置
+security:
+  secret_key: "test-secret-key-for-testing-only"
+  access_token_expire_minutes: 60  # 1小时
+  max_login_attempts: 3
+
+# 日志配置
+logging:
+  level: "WARNING"
+  format: "text"
+  console_output: true
+  log_dir: "tests/logs"
+
+# 监控配置
+monitoring:
+  metrics_enabled: false
+  health_check_enabled: false
+  alert_enabled: false
+
+# 数据源配置
+data:
+  cache_enabled: false  # 测试时禁用缓存
+  auto_update_enabled: false
+
+# 功能开关
+features:
+  enable_debug_toolbar: false
+  enable_profiling: false
+  enable_metrics: false
+  enable_alerts: false
+  enable_caching: false
+  enable_rate_limiting: false
+  enable_ssl: false
+  enable_monitoring: false
+  enable_audit_logging: false
+
+# 测试配置
+test:
+  use_in_memory_db: false
+  mock_external_apis: true
+  test_data_dir: "tests/data"
+  cleanup_after_test: true

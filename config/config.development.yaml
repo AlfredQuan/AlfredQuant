@@ -1,0 +1,59 @@
+# 量化投资研究框架 - 开发环境配置
+
+# 继承基础配置，只覆盖开发环境特定的配置
+
+# 应用配置
+app:
+  debug: true
+
+# 数据库配置
+database:
+  echo: true
+  pool_size: 5
+  max_overflow: 10
+
+# Redis配置
+redis:
+  max_connections: 20
+
+# API配置
+api:
+  debug: true
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://localhost:3001"
+    - "http://127.0.0.1:3000"
+    - "http://127.0.0.1:3001"
+  rate_limit_enabled: false
+
+# 安全配置
+security:
+  secret_key: "dev-secret-key-change-in-production"
+  password_min_length: 6
+  max_login_attempts: 10
+
+# 日志配置
+logging:
+  level: "DEBUG"
+  format: "text"
+  console_output: true
+
+# 监控配置
+monitoring:
+  alert_enabled: false
+  metrics_interval: 30
+
+# 功能开关
+features:
+  enable_debug_toolbar: true
+  enable_profiling: true
+  enable_alerts: false
+  enable_rate_limiting: false
+  enable_ssl: false
+
+# 开发工具配置
+dev_tools:
+  auto_reload: true
+  hot_reload: true
+  debug_sql: true
+  profile_requests: true

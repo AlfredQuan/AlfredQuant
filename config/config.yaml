@@ -1,0 +1,130 @@
+# 量化投资研究框架 - 基础配置文件
+
+# 应用配置
+app:
+  name: "量化投资研究框架"
+  version: "1.0.0"
+  description: "提供策略开发、回测、实时交易等功能的量化投资研究平台"
+  
+# 数据库配置
+database:
+  host: "localhost"
+  port: 5432
+  name: "quant_framework"
+  user: "postgres"
+  password: ""
+  pool_size: 20
+  max_overflow: 30
+  pool_timeout: 30
+  pool_recycle: 3600
+  echo: false
+  echo_pool: false
+
+# Redis配置
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: null
+  max_connections: 50
+  socket_timeout: 5
+  socket_connect_timeout: 5
+
+# Celery配置
+celery:
+  broker_url: "redis://localhost:6379/1"
+  result_backend: "redis://localhost:6379/2"
+  task_serializer: "json"
+  result_serializer: "json"
+  accept_content: ["json"]
+  timezone: "UTC"
+  enable_utc: true
+  worker_prefetch_multiplier: 1
+  task_acks_late: true
+  task_soft_time_limit: 1800  # 30分钟
+  task_time_limit: 3600       # 1小时
+
+# API配置
+api:
+  title: "量化投资研究框架 API"
+  description: "提供策略开发、回测、实时交易等功能的REST API"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  allowed_origins: ["*"]
+  allowed_methods: ["*"]
+  allowed_headers: ["*"]
+  rate_limit_enabled: true
+  rate_limit_calls: 100
+  rate_limit_period: 60
+
+# 安全配置
+security:
+  secret_key: "dev-secret-key-change-in-production"
+  algorithm: "HS256"
+  access_token_expire_minutes: 1440  # 24小时
+  refresh_token_expire_days: 30
+  password_min_length: 8
+  password_require_uppercase: true
+  password_require_lowercase: true
+  password_require_numbers: true
+  password_require_symbols: false
+  max_login_attempts: 5
+  lockout_duration_minutes: 15
+
+# 日志配置
+logging:
+  level: "INFO"
+  format: "json"
+  log_dir: "logs"
+  max_file_size: 104857600  # 100MB
+  backup_count: 5
+  console_output: true
+
+# 监控配置
+monitoring:
+  metrics_enabled: true
+  metrics_interval: 60
+  health_check_enabled: true
+  health_check_interval: 30
+  alert_enabled: true
+  alert_email_recipients: []
+  alert_webhook_url: null
+  alert_slack_webhook_url: null
+  alert_dingtalk_webhook_url: null
+
+# 数据源配置
+data:
+  primary_data_source: "tushare"
+  backup_data_source: "akshare"
+  tushare_token: null
+  wind_username: null
+  wind_password: null
+  cache_enabled: true
+  cache_timeout: 3600
+  auto_update_enabled: true
+  update_frequency: "daily"
+
+# SMTP邮件配置
+smtp:
+  host: "localhost"
+  port: 587
+  username: null
+  password: null
+  use_tls: true
+  use_ssl: false
+  from_email: "noreply@quantframework.com"
+
+# 功能开关
+features:
+  enable_debug_toolbar: false
+  enable_profiling: false
+  enable_metrics: true
+  enable_alerts: true
+  enable_caching: true
+  enable_rate_limiting: true
+  enable_ssl: false
+  enable_monitoring: true
+  enable_audit_logging: true
+  enable_data_validation: true

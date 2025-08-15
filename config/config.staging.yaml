@@ -1,0 +1,76 @@
+# 量化投资研究框架 - 预发布环境配置
+
+# 预发布环境配置，接近生产环境但用于测试
+
+# 应用配置
+app:
+  debug: false
+
+# 数据库配置
+database:
+  name: "quant_framework_staging"
+  pool_size: 15
+  max_overflow: 25
+  echo: false
+
+# Redis配置
+redis:
+  max_connections: 30
+
+# API配置
+api:
+  debug: false
+  allowed_origins:
+    - "https://staging.quantframework.com"
+    - "https://staging-api.quantframework.com"
+  rate_limit_enabled: true
+  rate_limit_calls: 200
+  rate_limit_period: 60
+
+# 安全配置
+security:
+  # 使用环境变量中的密钥
+  password_min_length: 8
+  max_login_attempts: 5
+  lockout_duration_minutes: 15
+
+# 日志配置
+logging:
+  level: "INFO"
+  format: "json"
+  console_output: false
+
+# 监控配置
+monitoring:
+  metrics_enabled: true
+  health_check_enabled: true
+  alert_enabled: true
+  metrics_interval: 60
+
+# 功能开关
+features:
+  enable_debug_toolbar: false
+  enable_profiling: false
+  enable_metrics: true
+  enable_alerts: true
+  enable_caching: true
+  enable_rate_limiting: true
+  enable_ssl: true
+  enable_monitoring: true
+  enable_audit_logging: true
+  enable_data_validation: true
+
+# 性能配置
+performance:
+  worker_processes: 2
+  worker_connections: 500
+  keepalive_timeout: 30
+  max_requests: 5000
+  timeout: 45
+
+# 缓存配置
+cache:
+  backend: "redis"
+  timeout: 1800  # 30分钟
+  max_entries: 5000
+  key_prefix: "quant_staging_"

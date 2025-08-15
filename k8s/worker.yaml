@@ -1,0 +1,201 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quant-framework-worker
+  namespace: quant-framework
+  labels:
+    app: quant-framework-worker
+    component: worker
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: quant-framework-worker
+  template:
+    metadata:
+      labels:
+        app: quant-framework-worker
+        component: worker
+    spec:
+      containers:
+      - name: worker
+        image: quant-framework:latest
+        command: ["poetry", "run", "celery", "-A", "quant_framework.tasks.celery_app", "worker", "--loglevel=warning", "--concurrency=8", "--max-tasks-per-child=1000"]
+        env:
+        - name: QUANT_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: quant-framework-config
+              key: QUANT_ENV
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: REDIS_URL
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: CELERY_BROKER_URL
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: CELERY_RESULT_BACKEND
+        - name: TUSHARE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: TUSHARE_TOKEN
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: quant-framework-config
+              key: LOG_LEVEL
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        - name: data
+          mountPath: /app/data
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "8Gi"
+            cpu: "4"
+        livenessProbe:
+          exec:
+            command:
+            - poetry
+            - run
+            - celery
+            - -A
+            - quant_framework.tasks.celery_app
+            - inspect
+            - ping
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - poetry
+            - run
+            - celery
+            - -A
+            - quant_framework.tasks.celery_app
+            - inspect
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: logs
+        emptyDir: {}
+      - name: data
+        persistentVolumeClaim:
+          claimName: app-data-pvc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quant-framework-beat
+  namespace: quant-framework
+  labels:
+    app: quant-framework-beat
+    component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quant-framework-beat
+  template:
+    metadata:
+      labels:
+        app: quant-framework-beat
+        component: scheduler
+    spec:
+      containers:
+      - name: beat
+        image: quant-framework:latest
+        command: ["poetry", "run", "celery", "-A", "quant_framework.tasks.celery_app", "beat", "--loglevel=warning"]
+        env:
+        - name: QUANT_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: quant-framework-config
+              key: QUANT_ENV
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: REDIS_URL
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: CELERY_BROKER_URL
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            secretKeyRef:
+              name: quant-framework-secrets
+              key: CELERY_RESULT_BACKEND
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: quant-framework-config
+              key: LOG_LEVEL
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: logs
+        emptyDir: {}
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: quant-framework-worker-hpa
+  namespace: quant-framework
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: quant-framework-worker
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
