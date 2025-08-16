@@ -1,0 +1,1 @@
+# 前端开发环境\nFROM node:18-alpine\n\n# 设置工作目录\nWORKDIR /app\n\n# 安装依赖\nRUN npm install -g npm@latest\n\n# 复制package文件\nCOPY package*.json ./\n\n# 安装依赖\nRUN npm install\n\n# 暴露端口\nEXPOSE 3000\n\n# 启动开发服务器\nCMD [\"npm\", \"start\"]\n
