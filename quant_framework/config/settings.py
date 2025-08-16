@@ -5,8 +5,8 @@
 import os
 from typing import Dict, Any, Optional, List, Union
 from pathlib import Path
-from pydantic import BaseSettings, Field, validator
-from pydantic.env_settings import SettingsSourceCallable
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .environment import get_environment_manager
 
@@ -39,8 +39,7 @@ class DatabaseSettings(BaseSettings):
         else:
             return f"postgresql://{self.user}@{self.host}:{self.port}/{self.name}"
     
-    class Config:
-        env_prefix = "DB_"
+    model_config = SettingsConfigDict(env_prefix="DB_")
 
 
 class RedisSettings(BaseSettings):
@@ -64,8 +63,7 @@ class RedisSettings(BaseSettings):
         else:
             return f"redis://{self.host}:{self.port}/{self.db}"
     
-    class Config:
-        env_prefix = "REDIS_"
+    model_config = SettingsConfigDict(env_prefix="REDIS_")
 
 
 class CelerySettings(BaseSettings):
@@ -91,8 +89,7 @@ class CelerySettings(BaseSettings):
     task_soft_time_limit: int = Field(default=1800, env="CELERY_TASK_SOFT_TIME_LIMIT")  # 30分钟
     task_time_limit: int = Field(default=3600, env="CELERY_TASK_TIME_LIMIT")  # 1小时
     
-    class Config:
-        env_prefix = "CELERY_"
+    model_config = SettingsConfigDict(env_prefix="CELERY_")
 
 
 class SMTPSettings(BaseSettings):
@@ -106,14 +103,13 @@ class SMTPSettings(BaseSettings):
     use_ssl: bool = Field(default=False, env="SMTP_USE_SSL")
     from_email: str = Field(default="noreply@quantframework.com", env="SMTP_FROM_EMAIL")
     
-    class Config:
-        env_prefix = "SMTP_"
+    model_config = SettingsConfigDict(env_prefix="SMTP_")
 
 
 class SecuritySettings(BaseSettings):
     """安全配置"""
     
-    secret_key: str = Field(env="SECRET_KEY")
+    secret_key: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
     algorithm: str = Field(default="HS256", env="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=1440, env="ACCESS_TOKEN_EXPIRE_MINUTES")  # 24小时
     refresh_token_expire_days: int = Field(default=30, env="REFRESH_TOKEN_EXPIRE_DAYS")
@@ -129,8 +125,7 @@ class SecuritySettings(BaseSettings):
     max_login_attempts: int = Field(default=5, env="MAX_LOGIN_ATTEMPTS")
     lockout_duration_minutes: int = Field(default=15, env="LOCKOUT_DURATION_MINUTES")
     
-    class Config:
-        env_prefix = "SECURITY_"
+    model_config = SettingsConfigDict(env_prefix="SECURITY_")
 
 
 class APISettings(BaseSettings):
@@ -155,8 +150,7 @@ class APISettings(BaseSettings):
     rate_limit_calls: int = Field(default=100, env="RATE_LIMIT_CALLS")
     rate_limit_period: int = Field(default=60, env="RATE_LIMIT_PERIOD")
     
-    class Config:
-        env_prefix = "API_"
+    model_config = SettingsConfigDict(env_prefix="API_")
 
 
 class LoggingSettings(BaseSettings):
@@ -173,8 +167,7 @@ class LoggingSettings(BaseSettings):
     # 控制台输出
     console_output: bool = Field(default=True, env="LOG_CONSOLE_OUTPUT")
     
-    class Config:
-        env_prefix = "LOG_"
+    model_config = SettingsConfigDict(env_prefix="LOG_")
 
 
 class MonitoringSettings(BaseSettings):
@@ -195,8 +188,7 @@ class MonitoringSettings(BaseSettings):
     alert_slack_webhook_url: Optional[str] = Field(default=None, env="ALERT_SLACK_WEBHOOK_URL")
     alert_dingtalk_webhook_url: Optional[str] = Field(default=None, env="ALERT_DINGTALK_WEBHOOK_URL")
     
-    class Config:
-        env_prefix = "MONITORING_"
+    model_config = SettingsConfigDict(env_prefix="MONITORING_")
 
 
 class DataSettings(BaseSettings):
@@ -219,8 +211,7 @@ class DataSettings(BaseSettings):
     auto_update_enabled: bool = Field(default=True, env="DATA_AUTO_UPDATE_ENABLED")
     update_frequency: str = Field(default="daily", env="DATA_UPDATE_FREQUENCY")  # daily, hourly, realtime
     
-    class Config:
-        env_prefix = "DATA_"
+    model_config = SettingsConfigDict(env_prefix="DATA_")
 
 
 class Settings(BaseSettings):
@@ -314,24 +305,11 @@ class Settings(BaseSettings):
             'feature_flags': self.feature_flags
         }
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        
-        @classmethod
-        def customise_sources(
-            cls,
-            init_settings: SettingsSourceCallable,
-            env_settings: SettingsSourceCallable,
-            file_secret_settings: SettingsSourceCallable,
-        ) -> tuple[SettingsSourceCallable, ...]:
-            """自定义配置源优先级"""
-            return (
-                init_settings,  # 初始化参数（最高优先级）
-                env_settings,   # 环境变量
-                file_secret_settings,  # 文件密钥
-            )
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False
+    )
 
 
 # 全局配置实例

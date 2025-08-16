@@ -126,6 +126,11 @@ def get_config() -> Config:
     return config
 
 
+def get_settings() -> Config:
+    """获取设置实例（兼容性别名）"""
+    return config
+
+
 def load_config_from_file(config_path: str) -> Optional[Dict[str, Any]]:
     """从文件加载配置"""
     config_file = Path(config_path)
